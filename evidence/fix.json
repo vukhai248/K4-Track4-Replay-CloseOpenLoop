@@ -8,7 +8,7 @@
   "synthetic_scenarios": 20000,
   "dagger_rounds": 2,
   "decision_PercMLP+": true,
-  "seconds": 527,
+  "seconds": 495,
   "held_out_cruise_speed": {
     "v_ego": 20.0,
     "attributable_area_per_seed": {
