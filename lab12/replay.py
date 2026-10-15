@@ -14,6 +14,14 @@ from . import config as C
 
 TICK_NS = int(C.DT * 1e9)
 PERCEPTION_DELAY_NS = 20_000_000
+
+
+def _bit_identical(a, b):
+    """True when the two rows have exactly the same bits (dtype, shape and bytes)."""
+    a, b = np.asarray(a), np.asarray(b)
+    return a.shape == b.shape and a.dtype == b.dtype and a.tobytes() == b.tobytes()
+
+
 DEADLINE_NS = TICK_NS                    # a command must be ready before the next frame arrives
 
 
@@ -122,7 +130,28 @@ def compare_with_tol(golden, new, atol=1e-3, rtol=1e-3):
     #   * |golden|. Hai NaN ở cùng vị trí coi là bằng nhau. Trả dict có đúng các khoá: segments,
     #   differ_beyond_tol, not_bit_identical (số đoạn không giống TỪNG BIT), max_abs_diff, atol, rtol,
     #   differing_segments (tối đa 20 chỉ số đầu, dạng list).
-    raise NotImplementedError("TODO compare_with_tol: xem GUIDE.md, Bước 1")
+    golden, new = np.asarray(golden, float), np.asarray(new, float)
+    if golden.shape != new.shape:
+        raise ValueError(f"two replays must have the same shape, got {golden.shape} vs {new.shape}")
+    tol = atol + rtol * np.abs(golden)                     # per-element tolerance, relative to the reference
+    both_nan = np.isnan(golden) & np.isnan(new)
+    one_nan = np.isnan(golden) ^ np.isnan(new)             # a command missing on one side is a real difference
+    with np.errstate(invalid="ignore"):
+        diff = np.abs(golden - new)
+    diff = np.where(both_nan, 0.0, diff)                   # padding on both sides: equal
+    bad = (diff > tol) | one_nan
+    n_seg = golden.shape[0]
+    differing = [int(s) for s in np.flatnonzero(bad.any(axis=1))[:20]]
+    valid = diff[~both_nan] if both_nan.any() else diff     # max diff over compared commands
+    return {
+        "segments": int(n_seg),
+        "differ_beyond_tol": int(bad.any(axis=1).sum()),
+        "not_bit_identical": int(sum(0 if _bit_identical(golden[s], new[s]) else 1 for s in range(n_seg))),
+        "max_abs_diff": float(valid.max()) if valid.size else 0.0,
+        "atol": float(atol),
+        "rtol": float(rtol),
+        "differing_segments": differing,
+    }
 
 
 def summation_order_demo(n=1_000_000, seed=0):
