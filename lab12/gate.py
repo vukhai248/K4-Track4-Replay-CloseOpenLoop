@@ -20,18 +20,19 @@ def rule_closed_loop_logs(c, b, margin=0.01):
     """R2. Non-inferiority on the held-out logs. c, b: the candidate's and the baseline's entry of closedloop.json["logs"]
     (each has ["collision"] = {"rate", "ci95": [low, high], ...}; for a learned planner the entry is its WORST seed).
     Pass when the candidate's UPPER 95 % bound is <= baseline rate + margin. Returns (passed: bool, detail: str)."""
-    # TODO (Bước 6): hãy tự cài hàm này. Gợi ý:
-    #   Quy tắc không-kém-hơn: pass khi CẬN TRÊN 95% của ứng viên <= tỷ lệ va chạm của baseline + margin.
-    #   Trả (ok, chuỗi mô tả) với chuỗi nêu số của cả hai bên.
-    raise NotImplementedError("TODO rule_closed_loop_logs: xem GUIDE.md, Bước 6")
+    hi = float(c["collision"]["ci95"][1])                 # upper 95 % bound: we must be sure, not hopeful
+    base = float(b["collision"]["rate"])
+    ok = bool(hi <= base + margin)
+    return ok, (f"candidate {c['collision']['rate']*100:.1f} % (n={c['collision']['n']}, upper 95 % {hi*100:.1f} %) "
+                f"vs IDM {base*100:.1f} % + {margin*100:.0f} point(s)")
 
 
 def rule_scenario_grid(area_candidate, area_baseline, margin=0.02):
     """R4. Both areas are the share of the cut-in grid where contact was avoidable but happened (0..1), worst seed.
     Pass when candidate <= baseline + margin. Returns (passed: bool, detail: str)."""
-    # TODO (Bước 6): hãy tự cài hàm này. Gợi ý:
-    #   pass khi diện tích của ứng viên <= diện tích của baseline + margin. Trả (ok, chuỗi mô tả).
-    raise NotImplementedError("TODO rule_scenario_grid: xem GUIDE.md, Bước 6")
+    ac, ab = float(area_candidate), float(area_baseline)
+    ok = bool(ac <= ab + margin)
+    return ok, f"candidate {ac*100:.1f} % of the avoidable cells vs IDM {ab*100:.1f} % + {margin*100:.0f} points"
 
 
 def evaluate(candidate, baseline, ev):
